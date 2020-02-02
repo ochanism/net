@@ -194,6 +194,59 @@ func (t *Transport) initConnPool() {
 	}
 }
 
+func (t *Transport) SnapshotConnPool() string {
+	if c, ok := t.connPoolOrDef.(*clientConnPool); ok {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		ss := fmt.Sprintf("endpoint count: %d\n", len(c.conns))
+		ss = fmt.Sprintf("%s+++++++++++++++++++++++++++++++++++++++\n", ss)
+		for k1, v1 := range c.conns {
+			ss = fmt.Sprintf("%shost: %s, count: %d\n", ss, k1, len(v1))
+			ss = fmt.Sprintf("%s--------------------------------\n", ss)
+			for k2, v2 := range v1 {
+				//v2.mu.Lock()
+				ss = fmt.Sprintf("%s " +
+					"[%d]  " +
+					"maxConcurrentStreams: %d, " +
+					"currentStreams: %d, " +
+					"nextStreamId: %d, " +
+					"canTakeNewStream: %t, " +
+					"lastActive: %s, " +
+					"lastIdel: %s\n",
+					ss,
+					k2,
+					v2.maxConcurrentStreams,
+					len(v2.streams),
+					v2.nextStreamID,
+					v2.idleState().canTakeNewRequest,
+					v2.lastActive.String(),
+					v2.lastIdle.String(),
+				)
+				ss = fmt.Sprintf("%s************************************\n", ss)
+				for k3, v3 := range v2.streams {
+					ss = fmt.Sprintf("%s " +
+						"[%d]  " +
+						"streamId: %d, " +
+						"reqMethod: %s, " +
+						"RequestURI: %s\n",
+						ss,
+						k3,
+						v3.ID,
+						v3.req.Method,
+						v3.req.RequestURI,
+					)
+				}
+				ss = fmt.Sprintf("%s************************************\n", ss)
+				//v2.mu.Unlock()
+			}
+			ss = fmt.Sprintf("%s--------------------------------\n", ss)
+		}
+		return ss
+	} else {
+		return fmt.Sprintln("Error!!!!")
+	}
+}
+
 // ClientConn is the state of a single HTTP/2 client connection to an
 // HTTP/2 server.
 type ClientConn struct {
